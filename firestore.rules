@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == "david.young@reallysimpleapps.com";
+    }
+
+    function isOwner(emails) {
+      return isSignedIn() && (request.auth.token.email in emails || isAdmin());
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidJobNumber(num) {
+      return num is string && num.matches('^[0-9]{6}$');
+    }
+
+    function isValidJob(data) {
+      return data.keys().hasAll(['cftJobNumber', 'customerOrderNumber', 'customerEmails', 'status', 'createdAt', 'updatedAt']) &&
+             data.keys().size() <= 15 && 
+             isValidJobNumber(data.cftJobNumber) &&
+             data.customerOrderNumber is string &&
+             data.customerEmails is list &&
+             (!('deliveryTerms' in data) || (data.deliveryTerms is string && data.deliveryTerms.size() <= 50)) &&
+             (!('projectEngineer' in data) || (data.projectEngineer is string && data.projectEngineer.size() <= 100)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             (!('dueDeliveryDate' in data) || (data.dueDeliveryDate is timestamp)) &&
+             (!('latestDeliveryDate' in data) || (data.latestDeliveryDate is timestamp)) &&
+             data.status in ['Order Received', 'Order Processing', 'In Production', 'QA / QC', 'Packing', 'Shipped', 'Delivered'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidLineItem(data) {
+      return data.keys().hasAll(['itemNo', 'name', 'quantity', 'status']) &&
+             data.keys().size() <= 8 && 
+             data.itemNo is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+             (!('sku' in data) || (data.sku is string && data.sku.size() <= 100)) &&
+             data.quantity is int && data.quantity > 0 &&
+             data.status in ['Pending', 'In Progress', 'Completed', 'Cancelled', 'In Production', 'Packing', 'Shipped', 'Delivered'];
+    }
+
+    match /jobs/{jobId} {
+      // Allow fetching if the doc doesn't exist (to check existence during seeding)
+      // or if the user is already the owner.
+      allow get: if isSignedIn() && (resource == null || isOwner(resource.data.customerEmails));
+      
+      // Allow listing if filtering by own email or admin
+      allow list: if isSignedIn() && (request.auth.token.email in resource.data.customerEmails || isAdmin());
+      
+      // Allow creation/update if the user is setting themselves as owner and data is valid
+      allow create, update: if isSignedIn() && isOwner(request.resource.data.customerEmails) && isValidJob(request.resource.data);
+      
+      allow delete: if false;
+
+      match /lineItems/{itemId} {
+        // Use get() to check parent ownership
+        allow get, list: if isSignedIn() && isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.customerEmails);
+        allow create: if isSignedIn() && isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.customerEmails) && isValidLineItem(request.resource.data);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

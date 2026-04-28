@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Job": {
+      "title": "Job",
+      "description": "A customer job tracking record",
+      "type": "object",
+      "properties": {
+        "cftJobNumber": {
+          "type": "string",
+          "description": "6-digit CFT job number"
+        },
+        "customerOrderNumber": {
+          "type": "string",
+          "description": "Customer's internal PO or Order Number"
+        },
+        "customerEmails": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "description": "Emails of customers who have access to this job"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Order Received", "Processing", "In Production", "Quality Check", "Ready for Dispatch", "Shipped", "Delivered"],
+          "description": "Current status of the job"
+        },
+        "dueDeliveryDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Requested due delivery date"
+        },
+        "latestDeliveryDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest estimated delivery date"
+        },
+        "description": {
+          "type": "string",
+          "description": "Overall description of the job"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["cftJobNumber", "customerOrderNumber", "customerEmails", "status", "createdAt", "updatedAt"]
+    },
+    "LineItem": {
+      "title": "Line Item",
+      "description": "A specific item within a job",
+      "type": "object",
+      "properties": {
+        "itemNo": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "In Progress", "Completed", "Cancelled"]
+        }
+      },
+      "required": ["itemNo", "name", "quantity", "status"]
+    }
+  },
+  "firestore": {
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Main collection for job records"
+    },
+    "/jobs/{jobId}/lineItems/{itemId}": {
+      "schema": "LineItem",
+      "description": "Line items for a specific job"
+    }
+  }
+}

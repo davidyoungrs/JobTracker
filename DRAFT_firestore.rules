@@ -1,0 +1,74 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isOwner(email) {
+      return isSignedIn() && request.auth.token.email == email;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidJobNumber(num) {
+      return num is string && num.matches('^[0-9]{6}$');
+    }
+
+    function isValidJob(data) {
+      return data.keys().hasAll(['jobNumber', 'customerEmail', 'status', 'createdAt', 'updatedAt']) &&
+             data.keys().size() <= 7 && // description is optional
+             isValidJobNumber(data.jobNumber) &&
+             data.customerEmail is string &&
+             data.status in ['Order Received', 'Processing', 'In Production', 'Quality Check', 'Ready for Dispatch', 'Shipped', 'Delivered'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidLineItem(data) {
+      return data.keys().hasAll(['name', 'quantity', 'status']) &&
+             data.keys().size() <= 4 && // sku is optional
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.quantity is int && data.quantity > 0 &&
+             data.status in ['Pending', 'In Progress', 'Completed', 'Cancelled'] &&
+             (!('sku' in data) || (data.sku is string && data.sku.size() <= 50));
+    }
+
+    match /jobs/{jobId} {
+      allow get: if isOwner(resource.data.customerEmail);
+      allow list: if isSignedIn() && resource.data.customerEmail == request.auth.token.email;
+      
+      // Only system should probably create jobs, but for now we'll allow authenticated users to initiate a tracking request or we assume they are created via admin.
+      // Usually customer portal is read-only for customers.
+      // But user said "develop a customer-facing portal".
+      // I'll assume creation is restricted or via a "create job" process (maybe mocked for this demo).
+      // Let's allow owners to create if jobId matches jobNumber logic or just allow authenticated users if they match the email.
+      allow create: if isOwner(request.resource.data.customerEmail) && isValidJob(request.resource.data);
+      
+      // Customers shouldn't update jobs, except maybe description? Usually read-only.
+      // I'll keep it read-only for now, except for the specified admin email.
+      allow update: if false; 
+      allow delete: if false;
+
+      match /lineItems/{itemId} {
+        allow get: if isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.customerEmail);
+        allow list: if isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.customerEmail);
+        allow create: if isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.customerEmail) && isValidLineItem(request.resource.data);
+        allow update, delete: if false;
+      }
+    }
+  }
+}
