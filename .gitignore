@@ -24,6 +24,9 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
+# Firebase config (contains keys that can trigger GitHub alerts)
+firebase-applet-config.json
+
 # IDEs
 .vscode/
 .idea/
