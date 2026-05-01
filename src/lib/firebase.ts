@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 
 // Use build-time injected config from vite.config.ts or environment variables
 const firebaseLocal = (typeof process !== 'undefined' && process.env.FIREBASE_CONFIG_LOCAL) 
@@ -25,3 +25,18 @@ if (!firebaseConfig.apiKey) {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, databaseId);
 export const auth = getAuth(app);
+
+// Connectivity Test (Mandatory for diagnosis)
+async function testConnection() {
+  try {
+    // Attempt to reach the server to verify config
+    await getDocFromServer(doc(db, '_connection_test_', 'check'));
+    console.log('Firebase connection verified');
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error('CRITICAL: Firebase is reporting "offline". This usually means your VITE_FIREBASE_PROJECT_ID or VITE_FIREBASE_API_KEY is incorrect or missing in Vercel.');
+    }
+  }
+}
+
+testConnection();
