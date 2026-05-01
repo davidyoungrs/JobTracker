@@ -13,3 +13,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare namespace NodeJS {
+  interface ProcessEnv {
+    FIREBASE_CONFIG_LOCAL: string;
+    GEMINI_API_KEY: string;
+  }
+}
