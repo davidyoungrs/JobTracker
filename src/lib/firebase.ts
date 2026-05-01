@@ -18,8 +18,21 @@ export const firebaseConfig = {
 
 const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseLocal.firestoreDatabaseId;
 
-if (!firebaseConfig.apiKey) {
-  console.error('Firebase configuration is missing! Please set VITE_FIREBASE_API_KEY and other related environment variables in your deployment settings.');
+const requiredVars = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID'
+];
+
+const missingVars = requiredVars.filter(key => !(import.meta.env[key] || firebaseLocal[key.replace('VITE_FIREBASE_', '').toLowerCase().replace(/_([a-z])/g, (g) => g[1].toUpperCase())] || firebaseLocal.apiKey));
+
+if (missingVars.length > 0 && !firebaseLocal.apiKey) {
+  console.error(`Firebase configuration is missing for: ${missingVars.join(', ')}. 
+Please set these environment variables in your deployment settings (e.g., Vercel). 
+Also, ensure your domain is added to 'Authorized Domains' in the Firebase Console under Authentication > Settings.`);
 }
 
 const app = initializeApp(firebaseConfig);
