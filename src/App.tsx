@@ -6,8 +6,9 @@ import { Navbar } from './components/Navbar';
 import { JobSearch } from './components/JobSearch';
 import { JobDashboard } from './components/JobDashboard';
 import { LoginPage } from './components/LoginPage';
+import { CreateJobForm } from './components/CreateJobForm';
 import { Job, LineItem, JobStatus } from './types/job';
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 enum OperationType {
@@ -56,6 +57,7 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [isCreatingJob, setIsCreatingJob] = useState(false);
 
   // Auto-seed demo jobs if user is logged in (for demo purposes)
   useEffect(() => {
@@ -239,7 +241,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans selection:bg-blue-100 selection:text-blue-900">
-      <Navbar onSignInClick={() => setShowLogin(true)} />
+      <Navbar 
+        onSignInClick={() => setShowLogin(true)} 
+        onCreateJobClick={user ? () => {
+          clearSearch();
+          setIsCreatingJob(true);
+        } : undefined}
+      />
 
       <main className="pb-20">
         <AnimatePresence mode="wait">
@@ -262,6 +270,22 @@ export default function App() {
               </div>
               <LoginPage onSuccess={() => setShowLogin(false)} />
             </motion.div>
+          ) : isCreatingJob && user ? (
+            <motion.div
+              key="create-job"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="pt-12"
+            >
+              <CreateJobForm 
+                onSuccess={(jobNumber) => {
+                  setIsCreatingJob(false);
+                  handleSearch(jobNumber);
+                }} 
+                onCancel={() => setIsCreatingJob(false)} 
+              />
+            </motion.div>
           ) : !currentJob ? (
             <motion.div
               key="search"
@@ -279,7 +303,33 @@ export default function App() {
                 </div>
               )}
 
-              {!user && (
+              {user ? (
+                <div className="max-w-md mx-auto mt-8 text-center p-8 bg-white rounded-[2.5rem] border border-zinc-100 shadow-xl shadow-zinc-200/50">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Plus className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-zinc-900 mb-2">Production Manager Portal</h3>
+                  <p className="text-zinc-500 mb-6 font-medium leading-relaxed">
+                    Welcome to your active workspace. You can search any job number above, or register a brand-new order below.
+                  </p>
+                  <button 
+                    onClick={() => {
+                      clearSearch();
+                      setIsCreatingJob(true);
+                    }}
+                    className="w-full py-4 rounded-2xl bg-zinc-900 text-white font-bold tracking-tight hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-lg shadow-zinc-200 flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create a New Job
+                  </button>
+                  <div className="mt-4 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-normal">
+                      Quick Demo Job Numbers:<br />
+                      <span className="text-blue-600">123456</span> (EXW) • <span className="text-blue-600">123457</span> (DDP)
+                    </p>
+                  </div>
+                </div>
+              ) : (
                 <div className="max-w-md mx-auto mt-8 text-center p-8 bg-white rounded-[2.5rem] border border-zinc-100 shadow-xl shadow-zinc-200/50">
                   <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <AlertCircle className="w-6 h-6" />

@@ -1,14 +1,15 @@
 import { auth } from '../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { LogIn, LogOut, Package2 } from 'lucide-react';
+import { LogIn, LogOut, Package2, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface NavbarProps {
   onSignInClick?: () => void;
+  onCreateJobClick?: () => void;
 }
 
-export function Navbar({ onSignInClick }: NavbarProps) {
+export function Navbar({ onSignInClick, onCreateJobClick }: NavbarProps) {
   const [user, loading] = useAuthState(auth);
 
   const handleLogout = () => signOut(auth);
@@ -28,7 +29,17 @@ export function Navbar({ onSignInClick }: NavbarProps) {
             {loading ? (
               <div className="w-8 h-8 rounded-full bg-zinc-100 animate-pulse" />
             ) : user ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 sm:gap-4">
+                {onCreateJobClick && (
+                  <button
+                    onClick={onCreateJobClick}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all active:scale-95 cursor-pointer shadow-md shadow-blue-200"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Create Job</span>
+                  </button>
+                )}
+                
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-bold text-zinc-900 leading-none">{user.displayName || user.email?.split('@')[0]}</p>
                   <p className="text-[10px] text-zinc-500 font-medium">{user.email}</p>
